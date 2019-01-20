@@ -10,9 +10,11 @@
 
     <form action="" method="POST" class="form-horizontal">
         {% csrf_token %}
-        <input type="text" name="mobile" id="mobile" placeholder="请输入用户名/手机号" class="login-name">
+        <input type="text" name="phone" value="{{ request.POST.phone }}" id="mobile" placeholder="请输入用户名/手机号" class="login-name">
+            <p class="text-danger">{{ form.errors.phone.0 }}</p>
         <input type="password" name="password" id="password" placeholder="请输入密码" class="login-password">
-        <input type="button" class="login-btn" value="我要登录">
+            <p class="text-danger">{{ form.errors.password.0 }}</p>
+        <input type="submit" class="login-btn" value="我要登录">
         <div class="agree">
             <a href="reg.html">免费注册</a>
             <a href="forgetpassword.html" class="forget">忘记密码？</a>

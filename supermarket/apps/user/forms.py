@@ -55,20 +55,21 @@ class RegisterModelForm(forms.ModelForm):
             return self.cleaned_data
 
 
-class LoginModelForm(forms.Form):
+class LoginModelForm(forms.ModelForm):
     """注册表单模型类"""
 
     # 验证密码单独定义一个字段
-
-
     class Meta:
         model = Users
-        fields = ['phone']
+        fields = ['phone','password']
 
 
         error_messages = {
             "phone":{
                 'required':'必须填写',
+            },
+            'password':{
+                'required':'请填写密码',
             }
         }
 
