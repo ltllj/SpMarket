@@ -6,7 +6,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from db.base_view import VerifyLoginView
-from user.forms import RegisterModelForm, LoginModelForm
+from user.forms import RegisterModelForm, LoginModelForm, ForgetModelForm, InforModelForm
 from user.helper import set_password, login, check_login
 from user.models import Users
 
@@ -75,14 +75,75 @@ class RegisterView(View):
 
 class MemberView(VerifyLoginView):
     # 个人中心
-    # @method_decorator(check_login)
+
     def get(self, request):
         return render(request, 'user/member.html')
 
-    # @method_decorator(check_login)
     def post(self, request):
         pass
 
     @method_decorator(check_login)
     def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request,*args,**kwargs)
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ForgetView(View):
+    """忘记密码"""
+
+    def get(self, request):
+        # 展示注册表单
+        return render(request, 'user/forgetpassword.html')
+
+    def post(self, request):
+        # 接受参数
+        data = request.POST
+        # 通过表单验证参数是否合法
+        forget_form = ForgetModelForm(data)
+        if forget_form.is_valid():
+            # 获取用户填写的手机号和密码
+            phone = forget_form.cleaned_data['phone']
+            password = forget_form.cleaned_data['password']
+            # 哈希加密
+            password = set_password(password)
+            # 查找出对应的手机号并对数据进行更新
+            Users.objects.filter(phone=phone).update(password=password)
+            # 跳转到登陆页面
+            return redirect('user:登录')
+
+        else:
+            # 错误
+            return render(request, 'user/forgetpassword.html', context={'forget_form': forget_form})
+
+
+class InforView(View):
+
+    def get(self, request):
+        # 返回个人资料页面
+        return render(request, 'user/infor.html')
+
+    def post(self, request):
+        # 接受参数
+        data = request.POST
+        # 通过表单验证参数是否合法
+        form = InforModelForm(data)
+        if form.is_valid():
+            # 从数据库中获取用户手机号
+            phone = Users.objects.get('phone')
+            # 获取用户填写的信息
+            nickname = form.cleaned_data['nickname']
+            gender = form.cleaned_data['gender']
+            birth_of_date = form.cleaned_data['birth_of_date']
+            school = form.cleaned_data['school']
+            possion = form.cleaned_data['possion']
+            Hometown = form.cleaned_data['Hometown']
+            # 更新对应用户的信息
+            Users.objects.filter(phone=phone).update(nickname=nickname,
+                                                     gender=gender,
+                                                     birth_of_date=birth_of_date,
+                                                     school=school,
+                                                     possion=possion,
+                                                     Hometown=Hometown,)
+            return redirect('user:个人资料')
+        else:
+            # 错误
+            return render(request,'user/infor.html',context={'form':form})

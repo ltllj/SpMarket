@@ -47,7 +47,7 @@ class RegisterModelForm(forms.ModelForm):
     # 验证两次密码是否一致
     def clean(self):
         pwd = self.cleaned_data.get('password')
-        repwd = self.cleaned_data.get('repasswprd')
+        repwd = self.cleaned_data.get('repassword')
         if pwd and repwd and pwd != repwd:
             # 抛出异常
             raise forms.ValidationError({'repassword': '两次密码不一致'})
@@ -96,3 +96,65 @@ class LoginModelForm(forms.ModelForm):
 
         return self.cleaned_data
 
+
+class ForgetModelForm(forms.ModelForm):
+    """注册表单模型类"""
+
+    # 单独定义一个字段
+    password = forms.CharField(max_length=16,
+                               min_length=8,
+                               error_messages={
+                                   'required': '密码必须填写',
+                                   'min_length': '密码最小长度至少8位',
+                                   'max_length': '密码最大长度最多16位',
+                               })
+
+    repassword = forms.CharField(max_length=16,
+                                 min_length=8,
+                                 error_messages={
+                                     'required': '密码必须填写',
+                                     'min_length': '密码最小长度至少8位',
+                                     'max_length': '密码最大长度最多16位',
+                                 })
+
+    class Meta:
+        model = Users
+        fields = ['phone']
+
+        error_messages = {
+            "phone": {
+                'required': '手机号码必须填写',
+            }
+        }
+
+    # 验证手机号是否在数据库中存在
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+
+        flag = Users.objects.filter(phone=phone)
+        if not flag:
+            raise forms.ValidationError('手机号不存在')
+
+        else:
+            return phone
+
+    # 验证两次密码是否一致
+    def clean(self):
+        pwd = self.cleaned_data.get('password')
+        repwd = self.cleaned_data.get('repassword')
+        if pwd and repwd and pwd != repwd:
+            # 抛出异常
+            raise forms.ValidationError({'repassword': '两次密码不一致'})
+        else:
+            return self.cleaned_data
+
+
+class InforModelForm(forms.ModelForm):
+    nickname = forms.CharField(max_length=10,
+                            error_messages={
+                                'min_length':'昵称最小长度为2位',
+
+                            })
+
+    def clean(self):
+            return self.cleaned_data
