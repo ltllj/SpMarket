@@ -1,4 +1,8 @@
-from django.http import HttpResponse
+import random
+import re
+import uuid
+
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 
 # Create your views here.
@@ -6,9 +10,10 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from db.base_view import VerifyLoginView
-from user.forms import RegisterModelForm, LoginModelForm, ForgetModelForm, InforModelForm
-from user.helper import set_password, login, check_login
+from user.forms import RegisterModelForm, LoginModelForm, ForgetModelForm, InforForm
+from user.helper import set_password, login, check_login, send_sms
 from user.models import Users
+from django_redis import get_redis_connection
 
 
 class LoginView(View):
@@ -115,35 +120,105 @@ class ForgetView(View):
             return render(request, 'user/forgetpassword.html', context={'forget_form': forget_form})
 
 
-class InforView(View):
+class InforView(VerifyLoginView):
 
     def get(self, request):
         # 返回个人资料页面
-        return render(request, 'user/infor.html')
+        # 在sesion中获取用户的ID
+        user_id = request.session.get('ID')
+        user = Users.objects.get(pk=user_id)
+        # 将用户信息渲染到页面
+        context = {
+            "user": user
+        }
+        return render(request, 'user/infor.html', context=context)
 
     def post(self, request):
         # 接受参数
         data = request.POST
         # 通过表单验证参数是否合法
-        form = InforModelForm(data)
+        form = InforForm(data)
         if form.is_valid():
-            # 从数据库中获取用户手机号
-            phone = Users.objects.get('phone')
+            head = request.FILES.get('head')
+            # 从session中获取用户id
+            user_id = request.session.get('ID')
             # 获取用户填写的信息
-            nickname = form.cleaned_data['nickname']
-            gender = form.cleaned_data['gender']
-            birth_of_date = form.cleaned_data['birth_of_date']
-            school = form.cleaned_data['school']
-            possion = form.cleaned_data['possion']
-            Hometown = form.cleaned_data['Hometown']
+            user = Users.objects.get(pk=user_id)
+            user.nickname = form.cleaned_data['nickname']
+            gender = data.get('gender')
+            birth_of_date = data.get('birth_of_date')
+            school = data.get('school')
+            position = data.get('position')
+            Hometown = data.get('Hometown')
+
             # 更新对应用户的信息
-            Users.objects.filter(phone=phone).update(nickname=nickname,
-                                                     gender=gender,
-                                                     birth_of_date=birth_of_date,
-                                                     school=school,
-                                                     possion=possion,
-                                                     Hometown=Hometown,)
+            Users.objects.filter(pk=user_id).update(gender=gender,
+                                                    birth_of_date=birth_of_date,
+                                                    school=school,
+                                                    position=position,
+                                                    Hometown=Hometown, )
+
+            if head is not None:
+                user.head = head
+            user.save()
+            # 同时修改session
+            login(request, user)
             return redirect('user:个人资料')
         else:
             # 错误
-            return render(request,'user/infor.html',context={'form':form})
+            return render(request, 'user/infor.html', context={'form': form})
+
+
+class SendcallsView(View):
+    """接收ajax请求,操作后端服务器,发送短信验证码"""
+
+    def get(self, request):
+        pass
+
+    def post(self, request):
+        # 一.接受参数
+        phone = request.POST.get('phone', '')
+        # 对接受的电话号码进行正则验证
+        res = re.search('^1[3-9]\d{9}$', phone)
+        # 判断参数合法性
+        if res is None:
+            return JsonResponse({'error': 1, 'error_message': '电话号码格式错误'})
+        # 二.操作数据
+
+        # 先模拟,最后接入运营商
+        # 1.模拟时需要自己先生成随机的验证码
+        # 2.保存验证码到redis中(好处:存储读取速度快,减轻服务器压力,并且可以设置过期时间)
+        # 3.最后接入运营商
+
+        # =====> 1.生成随机验证码(字符串)
+        list = [str(random.randint(0, 9)) for _ in range(6)]  # 这里是列表,需要转化成字符串
+        auth_code = "".join(list)
+        print(">>>>>>随机验证码:{}<<<<<<".format(auth_code))
+
+        # =====>2.保存验证码到redis中
+        connect = get_redis_connection()
+        # 保存手机号对应的验证码
+        connect.set(phone, auth_code)
+        # 设置60秒后过期
+        connect.expire(phone, 60)
+        # 获取当前手机号获取验证码的次数
+        phone_times = "{}_times".format(phone)
+        now_times = connect.get(phone_times)
+        if now_times is None or int(now_times) < 5:
+            # 保存手机发送验证码的次数,最多6次
+            connect.incr(phone_times)
+            # 设置一个过期时间,一个小时候再发送
+            connect.expire(phone_times, 3600)
+        else:
+            # 返回用户发送次数过多
+            return JsonResponse({"error": 1, "error_message": "发送验证码次数过多"})
+
+        # >>>3. 接入运营商
+        __business_id = uuid.uuid1()
+        params = "{\"code\":\"%s\",\"product\":\"猪罗大型商城超市\"}" % auth_code
+        # print(params)
+        rs = send_sms(__business_id, phone, "注册验证", "SMS_2245271", params)
+        print(rs.decode('utf-8'))
+
+        # 三.合成响应
+        return JsonResponse({'error': 0})

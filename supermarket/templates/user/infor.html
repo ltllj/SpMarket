@@ -9,7 +9,7 @@
 {% block header %}
     <header data-am-widget="header" class="am-header am-header-default sq-head ">
 			<div class="am-header-left am-header-nav">
-				<a href="javascript:history.back()" class="">
+				<a href="{% url 'user:个人中心' %}" class="">
 					<i class="am-icon-chevron-left"></i>
 				</a>
 			</div>
@@ -21,37 +21,40 @@
 {% endblock %}
 
 {% block content %}
-    <form action="" method="POST" class="form-horizontal">
+    <form action="" method="POST" class="form-horizontal" enctype="multipart/form-data">
     {% csrf_token %}
     <ul class="safty1">
 	    	<li>
-	    		<a href="">
-	    			<i style="margin-top: 25px;">头像</i>
+{#	    		<a href="">#}
+	    			<i>头像</i>
 	    			<div class="infor-pic">
-	    				<img src="{% static 'images/infortx.png' %}" />
+	    				<img src="{{ MEDIA_URL }}{{ user.head }}" />
 	    			</div>
-	    		</a>
+{#	    		</a>#}
 	    	</li>
+                <input type="file" name="head">
 	    	<li>
-	    		<a href="">
+{#	    		<a href="">#}
 	    			<i>昵称</i>
-	    			<input class="infor-tele" placeholder="默契"/>
+	    			<input class="infor-tele" name="nickname" value="{{ user.nickname|default:'' }}" placeholder="默契"/>
+
 	    		</a>
 	    	</li>
+            <p>{{ form.errors.nickname.0 }}</p>
 	    	<li>
-	    		<a href="">
+{#	    		<a href="">#}
 	    			<i>性别</i>
 	    			<i class="infor-tele">
 	    				<label class="am-radio-inline">
-				          <input type="radio" name="radio10" checked="checked" value="1" data-am-ucheck>男
+				          <input type="radio" name="gender" checked="checked" value="1" data-am-ucheck>男
 				        </label>
 				        <label class="am-radio-inline">
-				          <input type="radio" name="radio10" value="1" data-am-ucheck>女
+				          <input type="radio" name="gender" value="2" data-am-ucheck>女
 				        </label>
 	    			</i>
 	    		</a>
 	    	</li><li>
-	    		<a href="">
+{#	    		<a href="">#}
 	    			<i>生日</i>
                     <input class="infor-tele" placeholder="出生日期"/>
 	    		</a>
@@ -75,7 +78,7 @@
 	    			<i>手机</i>
                     <input class="infor-tele" placeholder="18888888888"/>
 	    	</li>
-             <button type="submit" class="btn btn-success">保存</button>
+             <button type="submit" class="am-btn am-btn-success">保存</button>
 	    </ul>
     <form/>
 {% endblock %}

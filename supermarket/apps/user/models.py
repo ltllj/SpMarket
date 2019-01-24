@@ -25,7 +25,7 @@ class Users(models.Model):  # 创建用户表
                                 null=True,
                                 blank=True,
                                 validators=[
-                                    MinLengthValidator(2, '用户名至少两位')
+                                    MinLengthValidator(2, '昵称至少两位')
                                 ])
 
     gender = models.SmallIntegerField(choices=gender_choices, default=1)
@@ -48,6 +48,8 @@ class Users(models.Model):  # 创建用户表
     birth_of_date = models.DateField(null=True,
                                      blank=True,
                                      )
+    # 设置头像字段
+    head = models.ImageField(upload_to='shop/%Y%m/%d', default='head/qqlogin.png')
 
     add_time = models.DateTimeField(auto_now_add=True)
     update_time = models.DateTimeField(auto_now=True)

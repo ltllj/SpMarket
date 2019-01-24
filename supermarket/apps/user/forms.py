@@ -2,7 +2,7 @@ from django import forms
 
 from user.helper import set_password
 from user.models import Users
-
+from django_redis import get_redis_connection
 
 class RegisterModelForm(forms.ModelForm):
     """注册表单模型类"""
@@ -23,6 +23,15 @@ class RegisterModelForm(forms.ModelForm):
                                      'min_length': '密码最小长度至少8位',
                                      'max_length': '密码最大长度最多16位',
                                  })
+    # 验证码验证
+    captcha = forms.CharField(max_length=6,
+                              error_messages={
+                                  'required': '验证码必须填写',
+                              })
+
+    agree = forms.BooleanField(error_messages={
+                                    'required': '必须同意用户协议'
+                              })
 
     class Meta:
         model = Users
@@ -51,8 +60,35 @@ class RegisterModelForm(forms.ModelForm):
         if pwd and repwd and pwd != repwd:
             # 抛出异常
             raise forms.ValidationError({'repassword': '两次密码不一致'})
-        else:
-            return self.cleaned_data
+
+        # 验证用户填写的验证码与redis中验证码是否一样
+        try:
+            captcha = self.cleaned_data.get('captcha')
+            phone = self.cleaned_data.get('phone','')
+            # 获取redis中的验证码
+            res = get_redis_connection()
+            auth_code = res.get(phone)
+            auth_code = auth_code.decode('utf-8')
+
+            # 比对
+            if captcha and captcha != auth_code:
+                raise forms.ValidationError({"captcha":"验证码输入错误"})
+        except:
+            raise forms.ValidationError({"captcha":"验证码输入错误"})
+
+
+
+        # 返回所有清洗后的数据
+        return self.cleaned_data
+
+
+
+
+
+
+
+
+
 
 
 class LoginModelForm(forms.ModelForm):
@@ -149,12 +185,16 @@ class ForgetModelForm(forms.ModelForm):
             return self.cleaned_data
 
 
-class InforModelForm(forms.ModelForm):
-    nickname = forms.CharField(max_length=10,
-                            error_messages={
-                                'min_length':'昵称最小长度为2位',
+class InforForm(forms.Form):
 
-                            })
+
+    nickname = forms.CharField(max_length=10,
+                               min_length=2,
+                               error_messages={
+                                   'min_length': '昵称最小长度为2位',
+                                   'max_length': '昵称最大长度为10位',
+
+                               })
 
     def clean(self):
-            return self.cleaned_data
+        return self.cleaned_data
