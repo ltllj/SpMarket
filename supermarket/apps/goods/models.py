@@ -174,7 +174,7 @@ class Wheel_planting(models.Model):
 
 class ActivityZone(models.Model):
     """
-        首页活动专区
+        首页特色专区
     """
     title = models.CharField(verbose_name='活动专区名称', max_length=150)
     brief = models.CharField(verbose_name="活动专区的简介",
@@ -185,7 +185,7 @@ class ActivityZone(models.Model):
     order = models.SmallIntegerField(verbose_name="排序",
                                      default=0,
                                      )
-    is_on_sale = models.BooleanField(verbose_name="上否上线",
+    is_on_sale = models.BooleanField(verbose_name="是否上线",
                                      choices=is_on_sale_choices,
                                      default=0,
                                      )
@@ -199,5 +199,5 @@ class ActivityZone(models.Model):
         return self.title
 
     class Meta:
-        verbose_name = "活动专区管理"
+        verbose_name = "特色专区管理"
         verbose_name_plural = verbose_name

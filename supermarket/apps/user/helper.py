@@ -1,8 +1,10 @@
 import hashlib
 import uuid
 
+from django.http import JsonResponse
 from django.shortcuts import redirect
 
+from carts.helper import json_msg
 from supermarket.settings import SECRET_KEY, ACCESS_KEY_ID, ACCESS_KEY_SECRET
 
 from aliyunsdkdysmsapi.request.v20170525 import SendSmsRequest
@@ -10,9 +12,6 @@ from aliyunsdkdysmsapi.request.v20170525 import SendSmsRequest
 from aliyunsdkcore.client import AcsClient
 
 from aliyunsdkcore.profile import region_provider
-
-
-
 
 
 def set_password(password):
@@ -34,21 +33,29 @@ def login(request, user):  # 保存session的方法
     request.session.set_expiry(0)  # 关闭浏览器就没有
 
 
-
-
 def check_login(func):  # 登录验证装饰器
     # 新函数
     def verify_login(request, *args, **kwargs):
         # 验证session中是否有登录标识
         if request.session.get("ID") is None:
-            # 跳转到登录
-            return redirect('user:登录')
+            # 将上个请求地址保存到session
+            referer = request.META.get('HTTP_REFERER',None)
+            if referer:
+                request.session['referer'] = referer
+
+            # 判断是否为ajax请求
+            if request.is_ajax():
+                return JsonResponse(json_msg(1,'未登录'))
+            else:
+                # 跳转到登录
+                return redirect('user:登录')
         else:
             # 调用原函数
             return func(request, *args, **kwargs)
 
     # 返回新函数
     return verify_login
+
 
 # 注意：不要更改
 REGION = "cn-hangzhou"
@@ -57,6 +64,7 @@ DOMAIN = "dysmsapi.aliyuncs.com"
 
 acs_client = AcsClient(ACCESS_KEY_ID, ACCESS_KEY_SECRET, REGION)
 region_provider.add_endpoint(PRODUCT_NAME, REGION, DOMAIN)
+
 
 def send_sms(business_id, phone_numbers, sign_name, template_code, template_param=None):
     smsRequest = SendSmsRequest.SendSmsRequest()

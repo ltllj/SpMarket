@@ -22,9 +22,12 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     # 上传部件自动调用的上传地址
     url(r'^ckeditor/', include("ckeditor_uploader.urls")),
-    url(r'^user/',include('user.urls',namespace='user')),
-    # url(r'^order/',include('order.urls',namespace='order')),
-    url(r'^goods/',include('goods.urls',namespace='goods')),
-    # url(r'^carts/',include('carts.urls',namespace='carts')),
-    url(r'^$',IndexView.as_view()),
+    # 全文搜索框架
+    url(r'^search/', include('haystack.urls', namespace='search')),
+
+    url(r'^user/', include('user.urls', namespace='user')),
+    url(r'^order/',include('order.urls',namespace='order')),
+    url(r'^goods/', include('goods.urls', namespace='goods')),
+    url(r'^carts/',include('carts.urls',namespace='carts')),
+    url(r'^$', IndexView.as_view()),
 ]

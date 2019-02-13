@@ -9,10 +9,11 @@ from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views import View
 
+from carts.helper import json_msg
 from db.base_view import VerifyLoginView
-from user.forms import RegisterModelForm, LoginModelForm, ForgetModelForm, InforForm
+from user.forms import RegisterModelForm, LoginModelForm, ForgetModelForm, InforForm, AddressAddForm
 from user.helper import set_password, login, check_login, send_sms
-from user.models import Users
+from user.models import Users, UserAddress
 from django_redis import get_redis_connection
 
 
@@ -42,9 +43,17 @@ class LoginView(View):
             # request.session.set_expiry(0)  # 关闭浏览器就没有
 
             login(request, user)
-            # 合成响应 跳转到个人中心
-            return redirect('user:个人中心')
 
+            referer = request.session.get('referer')
+
+            if referer:
+                # 跳转回去
+                # 删除session
+                del request.session['referer']
+                return redirect(referer)
+            else:
+                # 合成响应 跳转到个人中心
+                return redirect('user:个人中心')
 
         else:
             # 合成响应
@@ -222,3 +231,41 @@ class SendcallsView(View):
 
         # 三.合成响应
         return JsonResponse({'error': 0})
+
+
+class GladdressView(VerifyLoginView):
+    """管理收货地址"""
+
+    def get(self, request):
+        # 获取用户户新建的收货地址
+        user_id = request.session.get('ID')
+        user_addresses = UserAddress.objects.filter(user_id=user_id,is_delete=False).order_by('-isDefault')
+        # 渲染数据到模板
+        context = {
+            'user_addresses':user_addresses,
+        }
+        return render(request, "user/gladdress.html",context=context)
+
+
+class AddressView(VerifyLoginView):
+    """添加收货地址"""
+
+    def get(self, request):
+        return render(request, "user/address.html")
+
+    def post(self, request):
+        # 接收参数
+        data = request.POST.dict()  # 强制转换成字典
+
+        # 字典保存用户
+        data['user_id'] = request.session.get("ID")  # form自动转换功能
+
+        # 验证参数
+        form = AddressAddForm(data)
+
+        if form.is_valid():
+            form.instance.user = Users.objects.get(pk=data['user_id'])
+            form.save()
+            return JsonResponse(json_msg(0, '添加成功'))
+        else:
+            return JsonResponse(json_msg(1, "添加失败", data=form.errors))
